@@ -1,0 +1,31 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <script >
+  function getResult() {
+    var a = document.getElementsByName('a')[0].value;
+    var b = document.getElementsByName('b')[0].value;
+    var c = document.getElementsByName('c')[0].value;
+    var url = 'http://localhost:8000/?a='+a+'&b='+b +'&c='+c;
+    fetch(url).then(function(res) {
+      if (res.ok) {
+	res.text().then(function (text) {
+	document.getElementById('result').innerHTML = text;
+	});
+
+      } else {
+        console.log("Looks like the response wasn't perfect, got status", res.status);
+      }
+    }, function(e) {
+      console.log("Fetch failed!", e);
+    });
+  }
+</script>
+</head>
+<body>
+ <input type="text" name="a" />  -  <input type="text" name="b" />  +  <input type="text" name="c"/>  =  
+  <input type="submit" onClick='getResult()'/></br/>
+  <div id='result'>
+  </div>
+</body>
+</html>
