@@ -185,7 +185,6 @@ with tf.device(device_setter):
 
             _, loss_val, step = sess.run([optimizer, loss, global_step], feed_dict=feed_dict)
             average_loss += loss_val
-            local_step += 1
             if local_step % 5000 == 0:
                 if local_step > 0: average_loss /= 5000
                 print("Worker %d: Finished %d training steps (global step: %d): Average Loss: %g" % (FLAGS.worker_index, local_step, step, average_loss))
@@ -196,7 +195,8 @@ with tf.device(device_setter):
                 print_eval_result()
                 
             if step >= train_step: break
-    
+            local_step += 1
+
         time_end = time.time()
         print("Training ends @ %f" % time_end)
         training_time = time_end - time_begin
