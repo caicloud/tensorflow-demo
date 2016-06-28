@@ -3,16 +3,8 @@ import time
 
 import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
-import datetime
 
 flags = tf.app.flags
-flags.DEFINE_string("data_dir", "/tmp/data",
-                    "Directory for storing mnist data")
-        
-flags.DEFINE_boolean("download_only", False,
-                     "Only perform downloading of data; Do not proceed to "
-                     "session preparation, model definition or training")
-
 flags.DEFINE_integer("worker_index", 0,
                      "Worker task index, should be >= 0. worker_index=0 is "
                      "the master worker task the performs the variable "
@@ -24,18 +16,13 @@ flags.DEFINE_string("workers", None,
 flags.DEFINE_string("parameter_servers", None,
                     "The ps url list, separated by comma (e.g. tf-ps2:2222,1.2.3.5:2222)")
 
-flags.DEFINE_integer("grpc_port", 2222,
-                     "TensorFlow GRPC port")
-
-flags.DEFINE_integer("train_steps", 200000,
-                     "Number of (global) training steps to perform")
-
 flags.DEFINE_string("worker_grpc_url", None,
                     "Worker GRPC URL (e.g., grpc://1.2.3.4:2222, or "
                     "grpc://tf-worker0:2222)")
 FLAGS = flags.FLAGS
 
-cur_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+TRAING_STEP = 5000
+hidden_nodes = 500
 
 def nn_layer(input_tensor, input_dim, output_dim, act=tf.nn.relu):
     weights = tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1))
@@ -43,8 +30,7 @@ def nn_layer(input_tensor, input_dim, output_dim, act=tf.nn.relu):
     activations = act(tf.matmul(input_tensor, weights) + biases)
     return activations
 
-def model(x, y_, global_step):
-    hidden_nodes = 500
+def model(x, y_, global_step):   
     hidden1 = nn_layer(x, 784, hidden_nodes)
     y = nn_layer(hidden1, hidden_nodes, 10, act=tf.nn.softmax)
         
@@ -57,11 +43,9 @@ def model(x, y_, global_step):
     return train_step, accuracy
     
 print("Loading data from worker index = %d" % FLAGS.worker_index)
-
-mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
+mnist = input_data.read_data_sets("/tmp/data", one_hot=True)
 print("Testing set size: %d" % len(mnist.test.images))
 print("Training set size: %d" % len(mnist.train.images))
-if FLAGS.download_only: sys.exit(0)
 
 print("Worker GRPC URL: %s" % FLAGS.worker_grpc_url)
 print("Workers = %s" % FLAGS.workers)
@@ -117,7 +101,7 @@ with tf.device(device_setter):
             if local_step % 100 == 0:
                 print("Worker %d: training step %d done (global step: %d); Accuracy: %g" % 
                       (FLAGS.worker_index, local_step, step, sess.run(accuracy, feed_dict=val_feed)))
-            if step >= FLAGS.train_steps: break
+            if step >= TRAING_STEP: break
     
         time_end = time.time()
         print("Training ends @ %f" % time_end)
