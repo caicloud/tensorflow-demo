@@ -91,7 +91,7 @@ def generate_batch(batch_size, num_skips, skip_window):
 
 print("Loading data from worker index = %d" % FLAGS.worker_index)
 words = read_data("/tmp/data/text8.zip")
-print('Data size', len(words))
+print("Data size: %d" % len(words))
 data, count, dictionary, reverse_dictionary = build_dataset(words)
 
 print("Worker GRPC URL: %s" % FLAGS.worker_grpc_url)
@@ -185,21 +185,18 @@ with tf.device(device_setter):
 
             _, loss_val, step = sess.run([optimizer, loss, global_step], feed_dict=feed_dict)
             average_loss += loss_val
-            local_step += 1
-            print("Worker %d: Finished %d training step(s) (global step: %d)" % (FLAGS.worker_index, local_step, step))
-            
             if local_step % 5000 == 0:
                 if local_step > 0: average_loss /= 5000
-                # The average loss is an estimate of the loss over the last 2000 batches.
-                print("Average loss at step ", local_step, ": ", average_loss)
+                print("Worker %d: Finished %d training steps (global step: %d): Average Loss: %g" % (FLAGS.worker_index, local_step, step, average_loss))
                 average_loss = 0
         
             if local_step % 20000 == 0:
-                print("Validate evaluation result at at step ", local_step)
+                print("Validate evaluation result at step ", local_step)
                 print_eval_result()
                 
             if step >= train_step: break
-    
+            local_step += 1
+
         time_end = time.time()
         print("Training ends @ %f" % time_end)
         training_time = time_end - time_begin

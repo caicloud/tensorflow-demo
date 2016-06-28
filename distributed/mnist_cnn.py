@@ -169,7 +169,7 @@ with tf.device(device_setter):
             batch_xs, batch_ys = mnist.train.next_batch(BATCH_SIZE)
             reshaped_x = numpy.reshape(batch_xs, [BATCH_SIZE, 28, 28, 1])
             train_feed = {x: reshaped_x, y_: batch_ys}
-    
+
             _, step = sess.run([optimizer, global_step], feed_dict=train_feed)
             print("Worker %d: After %d training step(s) (global step: %d)" % (FLAGS.worker_index, local_step, step))
 
@@ -180,7 +180,7 @@ with tf.device(device_setter):
                   (FLAGS.worker_index, local_step, step, validate_acc, test_acc))
             if step >= TRAING_STEP: break
             local_step += 1
-    
+
         time_end = time.time()
         print("Training ends @ %f" % time_end)
         training_time = time_end - time_begin

@@ -25,7 +25,7 @@ TRAING_STEP = 5000
 hidden_nodes = 500
 
 def nn_layer(input_tensor, input_dim, output_dim, act=tf.nn.relu):
-    weights = tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1))
+    weights = tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, seed = 2))
     biases = tf.Variable(tf.constant(0.1, shape=[output_dim]))
     activations = act(tf.matmul(input_tensor, weights) + biases)
     return activations
@@ -49,9 +49,9 @@ print("Training set size: %d" % len(mnist.train.images))
 
 print("Worker GRPC URL: %s" % FLAGS.worker_grpc_url)
 print("Workers = %s" % FLAGS.workers)
-print("Using time = %s" % cur_time)
 
 is_chief = (FLAGS.worker_index == 0)
+if is_chief: tf.reset_default_graph()
 cluster = tf.train.ClusterSpec({"ps": FLAGS.parameter_servers.split(","), "worker": FLAGS.workers.split(",")})
 # Construct device setter object
 device_setter = tf.train.replica_device_setter(cluster=cluster)
@@ -95,13 +95,13 @@ with tf.device(device_setter):
             # Training feed
             batch_xs, batch_ys = mnist.train.next_batch(100)
             train_feed = {x: batch_xs, y_: batch_ys}
-    
+
             _, step = sess.run([train_step, global_step], feed_dict=train_feed)
-            local_step += 1
             if local_step % 100 == 0:
                 print("Worker %d: training step %d done (global step: %d); Accuracy: %g" % 
                       (FLAGS.worker_index, local_step, step, sess.run(accuracy, feed_dict=val_feed)))
             if step >= TRAING_STEP: break
+            local_step += 1
     
         time_end = time.time()
         print("Training ends @ %f" % time_end)
