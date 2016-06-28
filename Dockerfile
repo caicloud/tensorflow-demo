@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install -y bc
 
 RUN rm -rf /notebooks/*
 
-COPY mnist_data /tmp/data
+COPY data /tmp/data
 COPY file_server.py /file_server.py
 COPY run_tf.sh /run_tf.sh
 
