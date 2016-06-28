@@ -7,10 +7,6 @@ import tensorflow as tf
 from tensorflow.examples.tutorials.mnist import input_data
 
 flags = tf.app.flags   
-flags.DEFINE_boolean("download_only", False,
-                     "Only perform downloading of data; Do not proceed to "
-                     "session preparation, model definition or training")
-
 flags.DEFINE_integer("worker_index", 0,
                      "Worker task index, should be >= 0. worker_index=0 is "
                      "the master worker task the performs the variable "
@@ -27,20 +23,17 @@ flags.DEFINE_string("worker_grpc_url", None,
                     "grpc://tf-worker0:2222)")
 FLAGS = flags.FLAGS
 
-TRAING_STEP = 10000
+TRAING_STEP = 5000
 BATCH_SIZE = 64
 EVAL_SIZE = 50
 IMAGE_SIZE = 28
 NUM_CHANNELS = 1
 NUM_LABELS = 10
-cur_time = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
   
 print("Loading data from worker index = %d" % FLAGS.worker_index)
-
 mnist = input_data.read_data_sets("/tmp/data", one_hot=True)
 print("Testing set size: %d" % len(mnist.test.images))
 print("Training set size: %d" % len(mnist.train.images))
-if FLAGS.download_only: sys.exit(0)
 
 print("Worker GRPC URL: %s" % FLAGS.worker_grpc_url)
 print("Workers = %s" % FLAGS.workers)
@@ -59,17 +52,17 @@ with tf.device(device_setter):
             
     # The variables below hold all the trainable weights. 
     # Convolutional layers.
-    conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1))
+    conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1, seed = 2))
     conv1_biases = tf.Variable(tf.zeros([32]))
       
-    conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1))
+    conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, seed = 2))
     conv2_biases = tf.Variable(tf.constant(0.1, shape=[64]))
         
     # fully connected, depth 512.
-    fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512], stddev=0.1))
+    fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512], stddev=0.1, seed = 2))
     fc1_biases = tf.Variable(tf.constant(0.1, shape=[512]))
         
-    fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS], stddev=0.1))
+    fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS], stddev=0.1, seed = 2))
     fc2_biases = tf.Variable(tf.constant(0.1, shape=[NUM_LABELS]))
     
     x = tf.placeholder(tf.float32, shape=(None, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
@@ -157,7 +150,9 @@ with tf.device(device_setter):
             end = EVAL_SIZE
             total_correct = 0
             while end < total_len:
-                total_correct += sess.run(eval_correct_prediction, feed_dict={x: data_x[start:end], y_:data_y[start:end]})
+                cur_correct, step = sess.run([eval_correct_prediction, global_step], feed_dict={x: data_x[start:end], y_:data_y[start:end]})
+                total_correct += cur_correct
+                print(step)
                 start = end
                 end += EVAL_SIZE
                 if end > total_len: end = total_len
@@ -174,18 +169,18 @@ with tf.device(device_setter):
             batch_xs, batch_ys = mnist.train.next_batch(BATCH_SIZE)
             reshaped_x = numpy.reshape(batch_xs, [BATCH_SIZE, 28, 28, 1])
             train_feed = {x: reshaped_x, y_: batch_ys}
-    
+
             _, step = sess.run([optimizer, global_step], feed_dict=train_feed)
-            local_step += 1
             print("Worker %d: After %d training step(s) (global step: %d)" % (FLAGS.worker_index, local_step, step))
 
-            if local_step % 10 == 0:
+            if local_step % 100 == 0:
                 validate_acc = get_eval(reshaped_validate_data, validate_label)
                 test_acc = get_eval(reshaped_test_data, test_label)
                 print("Worker %d: After %d training step(s) (global step: %d), validation accuracy = %g, test accuracy = %g" %  
                   (FLAGS.worker_index, local_step, step, validate_acc, test_acc))
             if step >= TRAING_STEP: break
-    
+            local_step += 1
+
         time_end = time.time()
         print("Training ends @ %f" % time_end)
         training_time = time_end - time_begin

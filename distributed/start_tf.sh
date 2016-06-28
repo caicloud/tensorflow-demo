@@ -32,21 +32,15 @@ echo "WORKERS = ${WORKER_URLS}"
 echo "PARAMETER_SERVERS = ${PS_URLS}"
 echo "Running ${CODE}"
 WKR_LOG_PREFIX="/tmp/worker"
-
-# First, download the data from a single process, to avoid race-condition
-# during data downloading
-WORKER_GRPC_URL_0=$(echo ${WORKER_GRPC_URLS} | awk '{print $1}')
-
-python "${CODE}" \
-    --worker_grpc_url="${WORKER_GRPC_URL_0}" \
-    --worker_index=0 \
-    --download_only || exit 1
-
 URLS=($WORKER_GRPC_URLS)
 
 IDX=0
 ((NUM_WORKER--))
 while true; do
+  if [[ "${IDX}" == "${NUM_WORKER}" ]]; then
+    break
+  fi
+
   WORKER_GRPC_URL="${URLS[IDX]}"
   python "${CODE}" \
       --worker_grpc_url="${WORKER_GRPC_URL}" \
@@ -58,9 +52,6 @@ while true; do
   echo "  log file: ${WKR_LOG_PREFIX}${IDX}.log"
 
   ((IDX++))
-  if [[ "${IDX}" == "${NUM_WORKER}" ]]; then
-    break
-  fi
 done
 
 WORKER_GRPC_URL="${URLS[IDX]}"
