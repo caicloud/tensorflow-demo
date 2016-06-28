@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: tf-runner
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        name: tf-runner
+    spec:
+      containers:
+      - name: tf-runner
+        image: index.caicloud.io/caicloud/tensorflow
+        imagePullPolicy: Always
+        ports:  
+        - containerPort: 6006
+          name: tensorboard
+        - containerPort: 8888
+          name: jupyter
+        - containerPort: 8000
+          name: fileserver
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tf-runner
+  labels:
+    name: tf-runner
+spec:
+  type: LoadBalancer
+  ports:
+    - name: tensorboard
+      port: 6006
+    - name: jupyter
+      port: 8888
+    - name: fileserver
+      port: 8000
+  selector:
+    name: tf-runner
+

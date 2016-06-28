@@ -52,7 +52,7 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         while j < 5:
             if reverse[x[i]] != a and reverse[x[i]] != c:
                 if j == 0:
-                    content +=  "  <li><h1 style=\"font-size:150%;\">" + reverse[x[i]] + "</h1></li>"
+                    content += "  <li><h1 style=\"font-size:150%;\">" + reverse[x[i]] + "</h1></li>"
                 else:
                     content += "  <li>" + reverse[x[i]] + "</li>\n"
                 j += 1
@@ -65,9 +65,9 @@ class SimpleHTTPRequestHandler(BaseHTTPServer.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(content)
 
-fname = "glove.6B.300d.txt"
+fname = sys.argv[1]
 with open(fname) as fp:
-    print "Loading w2v"
+    print "Loading Word2Vec ..."
     i = 0
     for line in fp:
         paras = line.split(" ")
@@ -77,13 +77,13 @@ with open(fname) as fp:
         a = numpy.asarray(map(float, paras[1:]))
         v.append(a / numpy.sqrt(sum(numpy.square(a))))
         i += 1
-    print "w2v dic loaded."    
+    print "Word2Vec dictionary loaded!"    
 
 Handler = SimpleHTTPRequestHandler
 Server = BaseHTTPServer.HTTPServer
 Protocol = "HTTP/1.0"
-if sys.argv[1:]:
-    port = int(sys.argv[1])
+if sys.argv[2:]:
+    port = int(sys.argv[2])
 else:
     port = 8000
 server_address = ('127.0.0.1', port)
@@ -92,16 +92,3 @@ httpd = Server(server_address, Handler)
 print("Serving HTTP")
 httpd.serve_forever()
 
-'''
-curl "http://localhost:8000?a=boy&b=girl&c=wife"
-curl "http://localhost:8000?a=boy&b=girl&c=mother"
-curl "http://localhost:8000?a=boy&b=girl&c=policewoman"
-
-curl "http://localhost:8000?a=china&b=bejing&c=washington"
-curl "http://localhost:8000?a=china&b=bejing&c=shanghai"
-curl "http://localhost:8000?a=chicago&b=illinois&c=texas"
-
-curl -X GET -H "a: mango" -H "b: mangoes" -H "c: men" "http://localhost:8000"
-
-curl -X GET -H "a: europe" -H "b: euro" -H "c: dollar" "http://localhost:8000"
-'''

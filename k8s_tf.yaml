@@ -1,0 +1,169 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: tf-worker1
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        tf-worker: "0"
+    spec:
+      containers:
+      - name: tf-worker1
+        image: index.caicloud.io/caicloud/tf_grpc_test_server
+        args:
+          - --cluster_spec=worker|tf-worker1:2222;tf-worker3:2222;tf-worker5:2222,ps|tf-ps2:2222;tf-ps4:2222
+          - --job_name=worker
+          - --task_id=0
+        ports:
+        - containerPort: 2222
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tf-worker1
+  labels:
+    tf-worker: "0"
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 2222
+  selector:
+    tf-worker: "0"
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: tf-worker3
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        tf-worker: "1"
+    spec:
+      containers:
+      - name: tf-worker3
+        image: index.caicloud.io/caicloud/tf_grpc_test_server
+        args:
+          - --cluster_spec=worker|tf-worker1:2222;tf-worker3:2222;tf-worker5:2222,ps|tf-ps2:2222;tf-ps4:2222
+          - --job_name=worker
+          - --task_id=1
+        ports:
+        - containerPort: 2222
+---
+apiVersion: v1
+kind: Service
+metadata:
+  type: LoadBalancer
+  name: tf-worker3
+  labels:
+    tf-worker: "1"
+spec:
+  ports:
+  - port: 2222
+  selector:
+    tf-worker: "1"
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: tf-worker5
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        tf-worker: "2"
+    spec:
+      containers:
+      - name: tf-worker5
+        image: index.caicloud.io/caicloud/tf_grpc_test_server
+        args:
+          - --cluster_spec=worker|tf-worker1:2222;tf-worker3:2222;tf-worker5:2222,ps|tf-ps2:2222;tf-ps4:2222
+          - --job_name=worker
+          - --task_id=2
+        ports:
+        - containerPort: 2222
+---
+apiVersion: v1
+kind: Service
+metadata:
+  type: LoadBalancer
+  name: tf-worker5
+  labels:
+    tf-worker: "2"
+spec:
+  ports:
+  - port: 2222
+  selector:
+    tf-worker: "2"
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: tf-ps2
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        tf-ps: "0"
+    spec:
+      containers:
+      - name: tf-ps2
+        image: index.caicloud.io/caicloud/tf_grpc_test_server
+        args:
+          - --cluster_spec=worker|tf-worker1:2222;tf-worker3:2222;tf-worker5:2222,ps|tf-ps2:2222;tf-ps4:2222
+          - --job_name=ps
+          - --task_id=0
+        ports:
+        - containerPort: 2222
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tf-ps2
+  labels:
+    tf-ps: "0"
+spec:
+  ports:
+  - port: 2222
+  selector:
+    tf-ps: "0"
+---
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: tf-ps4
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        tf-ps: "1"
+    spec:
+      containers:
+      - name: tf-ps4
+        image: index.caicloud.io/caicloud/tf_grpc_test_server
+        args:
+          - --cluster_spec=worker|tf-worker1:2222;tf-worker3:2222;tf-worker5:2222,ps|tf-ps2:2222;tf-ps4:2222
+          - --job_name=ps
+          - --task_id=1
+        ports:
+        - containerPort: 2222
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tf-ps4
+  labels:
+    tf-ps: "1"
+spec:
+  ports:
+  - port: 2222
+  selector:
+    tf-ps: "1"
+---
+
