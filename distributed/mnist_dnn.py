@@ -19,15 +19,18 @@ flags.DEFINE_string("parameter_servers", None,
 flags.DEFINE_string("worker_grpc_url", None,
                     "Worker GRPC URL (e.g., grpc://1.2.3.4:2222, or "
                     "grpc://tf-worker0:2222)")
+
+flags.DEFINE_string("name_scope", None, "The variable name scope.")
 FLAGS = flags.FLAGS
 
 TRAING_STEP = 5000
 hidden_nodes = 500
 
 def nn_layer(input_tensor, input_dim, output_dim, act=tf.nn.relu):
-    weights = tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, seed = 2))
-    biases = tf.Variable(tf.constant(0.1, shape=[output_dim]))
-    activations = act(tf.matmul(input_tensor, weights) + biases)
+    with tf.name_scope(FLAGS.name_scope):  
+        weights = tf.Variable(tf.truncated_normal([input_dim, output_dim], stddev=0.1, seed = 2))
+        biases = tf.Variable(tf.constant(0.1, shape=[output_dim]))
+        activations = act(tf.matmul(input_tensor, weights) + biases)
     return activations
 
 def model(x, y_, global_step):   
@@ -49,9 +52,9 @@ print("Training set size: %d" % len(mnist.train.images))
 
 print("Worker GRPC URL: %s" % FLAGS.worker_grpc_url)
 print("Workers = %s" % FLAGS.workers)
+print("Using name scope %s" % FLAGS.name_scope)
 
 is_chief = (FLAGS.worker_index == 0)
-if is_chief: tf.reset_default_graph()
 cluster = tf.train.ClusterSpec({"ps": FLAGS.parameter_servers.split(","), "worker": FLAGS.workers.split(",")})
 # Construct device setter object
 device_setter = tf.train.replica_device_setter(cluster=cluster)
@@ -59,7 +62,8 @@ device_setter = tf.train.replica_device_setter(cluster=cluster)
 # The device setter will automatically place Variables ops on separate
 # parameter servers (ps). The non-Variable ops will be placed on the workers.
 with tf.device(device_setter):
-    global_step = tf.Variable(0, trainable=False)
+    with tf.name_scope(FLAGS.name_scope):
+        global_step = tf.Variable(0, trainable=False)
  
     x = tf.placeholder(tf.float32, [None, 784])
     y_ = tf.placeholder(tf.float32, [None, 10])
