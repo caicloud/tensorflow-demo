@@ -21,6 +21,8 @@ flags.DEFINE_string("parameter_servers", None,
 flags.DEFINE_string("worker_grpc_url", None,
                     "Worker GRPC URL (e.g., grpc://1.2.3.4:2222, or "
                     "grpc://tf-worker0:2222)")
+
+flags.DEFINE_string("name_scope", None, "The variable name scope.")
 FLAGS = flags.FLAGS
 
 TRAING_STEP = 5000
@@ -37,6 +39,7 @@ print("Training set size: %d" % len(mnist.train.images))
 
 print("Worker GRPC URL: %s" % FLAGS.worker_grpc_url)
 print("Workers = %s" % FLAGS.workers)
+print("Using name scope %s" % FLAGS.name_scope)
 
 is_chief = (FLAGS.worker_index == 0)
 if is_chief: tf.reset_default_graph()
@@ -47,23 +50,24 @@ device_setter = tf.train.replica_device_setter(cluster=cluster)
         
 # The device setter will automatically place Variables ops on separate
 # parameter servers (ps). The non-Variable ops will be placed on the workers.
-with tf.device(device_setter):    
-    global_step = tf.Variable(0, trainable=False)
+with tf.device(device_setter):
+    with tf.name_scope(FLAGS.name_scope):
+        global_step = tf.Variable(0, trainable=False)
+                
+        # The variables below hold all the trainable weights. 
+        # Convolutional layers.
+        conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1, seed = 2))
+        conv1_biases = tf.Variable(tf.zeros([32]))
+          
+        conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, seed = 2))
+        conv2_biases = tf.Variable(tf.constant(0.1, shape=[64]))
             
-    # The variables below hold all the trainable weights. 
-    # Convolutional layers.
-    conv1_weights = tf.Variable(tf.truncated_normal([5, 5, NUM_CHANNELS, 32], stddev=0.1, seed = 2))
-    conv1_biases = tf.Variable(tf.zeros([32]))
-      
-    conv2_weights = tf.Variable(tf.truncated_normal([5, 5, 32, 64], stddev=0.1, seed = 2))
-    conv2_biases = tf.Variable(tf.constant(0.1, shape=[64]))
-        
-    # fully connected, depth 512.
-    fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512], stddev=0.1, seed = 2))
-    fc1_biases = tf.Variable(tf.constant(0.1, shape=[512]))
-        
-    fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS], stddev=0.1, seed = 2))
-    fc2_biases = tf.Variable(tf.constant(0.1, shape=[NUM_LABELS]))
+        # fully connected, depth 512.
+        fc1_weights = tf.Variable(tf.truncated_normal([IMAGE_SIZE // 4 * IMAGE_SIZE // 4 * 64, 512], stddev=0.1, seed=2))
+        fc1_biases = tf.Variable(tf.constant(0.1, shape=[512]))
+            
+        fc2_weights = tf.Variable(tf.truncated_normal([512, NUM_LABELS], stddev=0.1, seed=2))
+        fc2_biases = tf.Variable(tf.constant(0.1, shape=[NUM_LABELS]))
     
     x = tf.placeholder(tf.float32, shape=(None, IMAGE_SIZE, IMAGE_SIZE, NUM_CHANNELS))
     y_ = tf.placeholder(tf.float32, shape=(None, NUM_LABELS))
@@ -96,17 +100,17 @@ with tf.device(device_setter):
         return tf.nn.softmax(tf.matmul(hidden, fc2_weights) + fc2_biases)
 
     train_y = model(x, True)
-    loss = -tf.reduce_mean(y_ * tf.log(tf.clip_by_value(train_y, 1e-10, 1.0)))
+    loss = -tf.reduce_mean(y_ * tf.log(train_y))
     regularizers = (tf.nn.l2_loss(fc1_weights) + tf.nn.l2_loss(fc1_biases) + 
                     tf.nn.l2_loss(fc2_weights) + tf.nn.l2_loss(fc2_biases))
     loss += 5e-4 * regularizers
-   
+
     # Decay once per epoch, using an exponential schedule starting at 0.01.
     learning_rate = tf.train.exponential_decay(
-        0.01,  # Base learning rate.
+        0.01,                      # Base learning rate.
         global_step * BATCH_SIZE,  # Current index into the dataset.
         mnist.train.num_examples,  # Decay step.
-        0.95,  # Decay rate.
+        0.95,                      # Decay rate.
         staircase=True)
     
     # Use simple momentum for the optimization.
@@ -133,7 +137,7 @@ with tf.device(device_setter):
                              global_step=global_step)
     sess_config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=True,
                                  device_filters=["/job:ps", "/job:worker/task:%d" % FLAGS.worker_index])
-        
+    
     # The chief worker (worker_index==0) session will prepare the session,
     # while the remaining workers will wait for the preparation to complete.
     if is_chief:
@@ -152,12 +156,11 @@ with tf.device(device_setter):
             while end < total_len:
                 cur_correct, step = sess.run([eval_correct_prediction, global_step], feed_dict={x: data_x[start:end], y_:data_y[start:end]})
                 total_correct += cur_correct
-                print(step)
                 start = end
                 end += EVAL_SIZE
                 if end > total_len: end = total_len
             
-            return float(total_correct)/float(total_len)
+            return float(total_correct) / float(total_len)
         
         # Perform training
         time_begin = time.time()
@@ -171,12 +174,10 @@ with tf.device(device_setter):
             train_feed = {x: reshaped_x, y_: batch_ys}
 
             _, step = sess.run([optimizer, global_step], feed_dict=train_feed)
-            print("Worker %d: After %d training step(s) (global step: %d)" % (FLAGS.worker_index, local_step, step))
-
             if local_step % 100 == 0:
                 validate_acc = get_eval(reshaped_validate_data, validate_label)
                 test_acc = get_eval(reshaped_test_data, test_label)
-                print("Worker %d: After %d training step(s) (global step: %d), validation accuracy = %g, test accuracy = %g" %  
+                print("Worker %d: After %d training step(s) (global step: %d), validation accuracy = %g, test accuracy = %g" % 
                   (FLAGS.worker_index, local_step, step, validate_acc, test_acc))
             if step >= TRAING_STEP: break
             local_step += 1

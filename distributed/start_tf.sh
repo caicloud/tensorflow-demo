@@ -33,6 +33,7 @@ echo "PARAMETER_SERVERS = ${PS_URLS}"
 echo "Running ${CODE}"
 WKR_LOG_PREFIX="/tmp/worker"
 URLS=($WORKER_GRPC_URLS)
+CUR_BATCH=$(date "+%H%M%S%d%m%y")
 
 IDX=0
 ((NUM_WORKER--))
@@ -46,6 +47,7 @@ while true; do
       --worker_grpc_url="${WORKER_GRPC_URL}" \
       --worker_index=${IDX} \
       --workers=${WORKER_URLS} \
+      --name_scope=${CUR_BATCH} \
       --parameter_servers=${PS_URLS} > "${WKR_LOG_PREFIX}${IDX}.log" &
   echo "Worker ${IDX}: "
   echo "  GRPC URL: ${WORKER_GRPC_URL}"
@@ -59,6 +61,7 @@ python "${CODE}" \
     --worker_grpc_url="${WORKER_GRPC_URL}" \
     --worker_index=${IDX} \
     --workers=${WORKER_URLS} \
+    --name_scope=${CUR_BATCH} \
     --parameter_servers=${PS_URLS}
 
 echo "Done!"
