@@ -10,9 +10,9 @@ This [script](https://github.com/caicloud/tensorflow-demo/blob/master/distribute
 ```
 ./start_tf.sh 8 3 mnist_cnn.py
 ```
-The first parameter gives the number of workers (this can be different from the nubmer of workers specified when creating the cluster).
+The first parameter gives the number of workers. This can be equal or smaller than the nubmer of workers specified when creating the cluster).
 
-The second parameter gives the number of parameter servers, this must be the same as num_parameter_servers specified when creating the TensorFlow cluster.
+The second parameter gives the number of parameter servers. This must be the same as num_parameter_servers specified when creating the TensorFlow cluster.
 
 The third parameter gives the code to be run.
 

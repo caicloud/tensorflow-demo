@@ -2,7 +2,7 @@
 This repository includes TensorFlow example codes for both distributed and non-distributed version. **Contributions are very welcome.**
 
 ## Local examples
-To run the local examples on Juypter Notebooks, you can either use caicloud.io directly or run it in docker with caicloud TensorFlow image.
+To run the local examples on Jupyter Notebooks, you can either use caicloud.io directly or run it in docker with caicloud TensorFlow image.
 
 ### Use caicloud.io machine learning SaaS
 - Step 1. Login into [caicloud.io](https://console.caicloud.io/login). Registry [here](https://console.caicloud.io/reg) if you don't have a caicloud account. After login, you may see something like this
@@ -11,7 +11,7 @@ To run the local examples on Juypter Notebooks, you can either use caicloud.io d
 
 - Step 3. Creat an experiment environment by click “创建单机实验” and fill the required fields.
 
-- Step 4. Open Juypter Notebook
+- Step 4. Open Jupyter Notebook
 
 
 ### Use caicloud TensorFlow docker image
@@ -31,15 +31,15 @@ To run the local examples on Juypter Notebooks, you can either use caicloud.io d
   docker run --net=host index.caicloud.io/tensorflow:0.8.0
   ```
 
-- Step 4. Access the Juypter Notebook at ```localhost:8888```
+- Step 4. Access the Jupyter Notebook at ```localhost:8888```
 
 
 ## Distributed examples
 Distributed TensorFlow examples could only be run on [caicloud.io](caicloud.io).
 
-- Step 1. Create distributed TensorFlow cluster. This may take a few minutes.
+- Step 1. Create distributed TensorFlow cluster. This may take a few minutes. Note you'll need to create a kubernetes cluster before deploying a TensorFlow cluster. This [doc](http://www.clipular.com/c/4898024607711232.png?k=8TxxmTwy57gXs7SZ9iVVopscjKg) describes how to create a kubernetes cluster on caicloud.io.
 
-- Step 2. Open Juypter Notebook.
+- Step 2. Open Jupyter Notebook.
 
 - Step 3. Create a terminal.
 
