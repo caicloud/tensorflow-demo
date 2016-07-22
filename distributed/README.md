@@ -18,6 +18,7 @@ The third parameter gives the code to be run.
 
 #### MNIST examples
 - DNN example ([code](https://github.com/caicloud/tensorflow-demo/blob/master/distributed/mnist_dnn.py))
+- DNN example with Sync updates ([code](https://github.com/caicloud/tensorflow-demo/blob/master/distributed/mnist_dnn_sync_update.py))
 - CNN example ([code](https://github.com/caicloud/tensorflow-demo/blob/master/distributed/mnist_cnn.py))
 
 #### Word to Vector example
