@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
       - name: tf-worker1
-        image: index.caicloud.io/caicloud/tf_grpc_test_server
+        image: index.caicloud.io/tf_grpc_test_server
         args:
           - --cluster_spec=worker|tf-worker1:2222;tf-worker3:2222;tf-worker5:2222,ps|tf-ps2:2222;tf-ps4:2222
           - --job_name=worker

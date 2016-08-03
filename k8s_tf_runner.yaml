@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
       - name: tf-runner
-        image: index.caicloud.io/caicloud/tensorflow
+        image: index.caicloud.io/tensorflow:0.8.0
         imagePullPolicy: Always
         ports:  
         - containerPort: 6006
