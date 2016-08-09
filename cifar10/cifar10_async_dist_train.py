@@ -7,7 +7,7 @@ import os.path
 import time
 
 import numpy as np
-from six.moves import xrange  # pylint: disable=redefined-builtin
+from six.moves import xrange
 import tensorflow as tf
 
 from tensorflow.models.image.cifar10 import cifar10
@@ -36,21 +36,16 @@ tf.app.flags.DEFINE_boolean('log_device_placement', False,
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
-INITIAL_LEARNING_RATE = 0.1       # Initial learning rate.
-MOVING_AVERAGE_DECAY = 0.9999     # The decay to use for the moving average.
-NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 50000
-NUM_EPOCHS_PER_DECAY = 350.0      # Epochs after which learning rate decays.
-LEARNING_RATE_DECAY_FACTOR = 0.1  # Learning rate decay factor.
-
 def train():
     ps_hosts = FLAGS.ps_hosts.split(',')
     worker_hosts = FLAGS.worker_hosts.split(',')
     print ('PS hosts are: %s' % ps_hosts)
     print ('Worker hosts are: %s' % worker_hosts)
 
-    server = tf.train.Server({'ps': ps_hosts, 'worker': worker_hosts},
-                             job_name = FLAGS.job_name,
-                             task_index=FLAGS.task_id)
+    server = tf.train.Server(
+        {'ps': ps_hosts, 'worker': worker_hosts},
+        job_name = FLAGS.job_name,
+        task_index=FLAGS.task_id)
 
     if FLAGS.job_name == 'ps':
         server.join()
@@ -60,8 +55,7 @@ def train():
         if tf.gfile.Exists(FLAGS.train_dir):
             tf.gfile.DeleteRecursively(FLAGS.train_dir)
         tf.gfile.MakeDirs(FLAGS.train_dir)
-
-
+  
     device_setter = tf.train.replica_device_setter(ps_tasks=1)
     with tf.device('/job:worker/task:%d' % FLAGS.task_id):
         with tf.device(device_setter):
@@ -76,49 +70,7 @@ def train():
 
             # Calculate loss.
             loss = cifar10.loss(logits, labels)
-
-            # Need to re-implement the training part for sync updates.
-            num_batches_per_epoch = NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN / FLAGS.batch_size
-            decay_steps = int(num_batches_per_epoch * NUM_EPOCHS_PER_DECAY)
-
-            # Decay the learning rate exponentially based on the number of steps.
-            lr = tf.train.exponential_decay(INITIAL_LEARNING_RATE,
-                                            global_step,
-                                            decay_steps,
-                                            LEARNING_RATE_DECAY_FACTOR,
-                                            staircase=True)
-            tf.scalar_summary('learning_rate', lr)
-            opt = tf.train.GradientDescentOptimizer(lr)
-
-            # Track the moving averages of all trainable variables.
-            exp_moving_averager = tf.train.ExponentialMovingAverage(MOVING_AVERAGE_DECAY, global_step)
-            variables_to_average = (tf.trainable_variables() + tf.moving_average_variables())
-
-            opt = tf.train.SyncReplicasOptimizer(
-                opt,
-                replicas_to_aggregate=len(worker_hosts),
-                replica_id=FLAGS.task_id,
-                total_num_replicas=len(worker_hosts),
-                variable_averages=exp_moving_averager,
-                variables_to_average=variables_to_average)
-
-
-            # Compute gradients with respect to the loss.
-            grads = opt.compute_gradients(loss)
-
-            # Add histograms for gradients.
-            for grad, var in grads:
-                if grad is not None:
-                    tf.histogram_summary(var.op.name + '/gradients', grad)
-
-            apply_gradients_op = opt.apply_gradients(grads, global_step=global_step)
-
-            with tf.control_dependencies([apply_gradients_op]):
-                train_op = tf.identity(loss, name='train_op')
-
-
-            chief_queue_runners = [opt.get_chief_queue_runner()]
-            init_tokens_op = opt.get_init_tokens_op()
+            train_op = cifar10.train(loss, global_step)
 
             saver = tf.train.Saver()
             # We run the summaries in the same thread as the training operations by
@@ -147,11 +99,7 @@ def train():
             queue_runners = tf.get_collection(tf.GraphKeys.QUEUE_RUNNERS)
             sv.start_queue_runners(sess, queue_runners)
             print ('Started %d queues for processing input data.' % len(queue_runners))
-
-            sv.start_queue_runners(sess, chief_queue_runners)
-            sess.run(init_tokens_op)
-
-            print ('Start training')
+  
             """Train CIFAR-10 for a number of steps."""
             for step in xrange(FLAGS.max_steps):
                 start_time = time.time()
@@ -169,8 +117,8 @@ def train():
                     print (format_str % (datetime.now(), step, gs, loss_value, examples_per_sec, sec_per_batch))
 
     if is_chief:
-        saver.save(sess, os.path.join(FLAGS.train_dir, 'model.ckpt'),
-                   global_step=global_step)
+        saver.save(sess, os.path.join(FLAGS.train_dir, 'model.ckpt'), global_step=global_step)
+
 
 def main(argv=None):
     cifar10.maybe_download_and_extract()
